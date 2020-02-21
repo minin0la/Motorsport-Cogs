@@ -1,0 +1,10 @@
+{
+    "author" : ["Author", "Minin0la"],
+    "install_msg" : "Sucessfully Install MotorSport Price Cogs",
+    "name" : "MotorSport Price",
+    "short" : "",
+    "requirements" : ["requests", "fuzzywuzzy", "pygsheets"],
+    "description" : "",
+    "permissions" : ["List of Bot permissions required"],
+    "tags" : [""]
+}

@@ -1,0 +1,10 @@
+{
+    "author" : ["Author", "Minin0la"],
+    "install_msg" : "Sucessfully Install MotorSport Customer Cogs",
+    "name" : "MotorSport Price",
+    "short" : "",
+    "requirements" : [],
+    "description" : "",
+    "permissions" : ["List of Bot permissions required"],
+    "tags" : [""]
+}
