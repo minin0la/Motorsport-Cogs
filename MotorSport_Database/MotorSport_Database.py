@@ -11,371 +11,92 @@ import os
 import asyncio
 import json
 from fuzzywuzzy import process
+import pygsheets
+import random
+
+from .Order import Order
 
 class MOTORSPORT_DATABASE(commands.Cog):
     """Motorsport Database System"""
 
     def __init__(self, bot):
         self.bot = bot
+        # self.update_vehicle.start()
         self.database = Config.get_conf(self, identifier=1)
-        data = {"Stocks": [],
+        data = {"Vehicles": [],
                 "OldStocks": [],
                 "Token": "",
         }
         self.database.register_guild(**data)
-        self.prices = Config.get_conf(None, identifier=1, cog_name='MOTORSPORT_PRICE')
-        self.check_stock.start()
         self.gc = pygsheets.authorize(service_file="client_secret.json")
+        super().__init__()
     
     def cog_unload(self):
-        self.check_stock.cancel()
+        self.update_vehicle.cancel()
 
-    # def is_not_channel(idlist):
-    #     def predicate(ctx):
-    #         if ctx.message.channel.id not in idlist:
-    #             return True
-    #         else:
-    #             return False
-    #     return commands.check(predicate)
-    
-    @commands.command(pass_context=True)
-    @commands.guild_only()
-    async def stock(self, ctx, *, vehicle_name): 
-        """
-        Used to search in-stock vehicle
-        """
-        async with self.database.guild(ctx.guild).Stocks() as stocks:
-            car_list = [d['Name'] for d in stocks]
-        car_name_matched = process.extractBests(vehicle_name, car_list, score_cutoff=80, limit=2)
-        not_matched = False
-        multiple_match = False
-        if str(car_name_matched) == '[]':
-            not_matched = True
-        if len(list(car_name_matched)) > 1 and car_name_matched[0][1] != 100:
-            multiple_match = True
-        if not_matched == False and multiple_match != True:
-            stocks = await self.database.guild(ctx.guild).Stocks()
-            for stock in stocks:
-                if stock['Name'] == car_name_matched[0][0]:
-                    await ctx.send("I have found {} {} in-stock for ${:,d}".format(stock['Stock'], stock['Name'], stock['Price']))
-        else:
-            if multiple_match != True:
-                thesimilarresult = "__**Other vehicles in-stock**__\n"
-                # car_list_new = {n.lower(): n for n in car_list}
-                # car_name_matched = [car_list_new[r] for r in difflib.get_close_matches(car_name.lower(), car_list_new, 5, 0.5)]
-                car_name_matched = process.extract(vehicle_name, car_list, limit=5)
-                if car_name_matched[0][0] != "Vehicle Name":
-                    for i in range(len(list(car_name_matched))):
-                        thesimilarresult = thesimilarresult + str(car_name_matched[i][0]) + "\n"
-                    await ctx.send("""**Vehicle not found.\nThe vehicle might not be in-stock. Place your order by `!order`**\n\n""" + thesimilarresult)
-                else:
-                    await ctx.send("""**Vehicle not found.\nThe vehicle might not be in-stock. Place your order by `!order`**\n\n""")
-            else:
-                await ctx.send("""**I have matched more than one result.**\n{} ({}%)\n{} ({}%)""".format(car_name_matched[0][0], car_name_matched[0][1], car_name_matched[1][0], car_name_matched[1][1]))
+    async def vehicle_price(self):
+        print("Get Price")
+        sh = self.gc.open_by_key("12gmECNatiWtDeGt5Oc3Zw7_CVP8kXxdwW50nqQ_Gfzg")
+        wks = sh.worksheet_by_title("Bot Data Sheet")
+        vehicle_name = wks.get_col(1, include_tailing_empty=False)
+        price = wks.get_col(2, include_tailing_empty=False)
+        types = wks.get_col(3, include_tailing_empty=False)
+        brand = wks.get_col(4, include_tailing_empty=False)
+        capacity = wks.get_col(5, include_tailing_empty=False)
+        drive = wks.get_col(6, include_tailing_empty=False)
+        vehicle_image = wks.get_col(7, include_tailing_empty=False)
+        brand_image = wks.get_col(8, include_tailing_empty=False)
+        performance_image = wks.get_col(9, include_tailing_empty=False)
+        vip_price = wks.get_col(10, include_tailing_empty=False)
+        glovebox = wks.get_col(11, include_tailing_empty=False)
+        trunk = wks.get_col(12, include_tailing_empty=False)
+        for_sale = wks.get_col(14, include_tailing_empty=False)
+        veh_price = []
 
-    @commands.command(pass_context=True)
-    @commands.guild_only()
-    @commands.cooldown(rate=1, per=10.0, type=commands.BucketType.default)
-    async def allstock(self, ctx):
-        stocks = await self.database.guild(ctx.guild).Stocks()
-        classlist = [x['Class'] for x in stocks]
-        classlist = list(dict.fromkeys(classlist))
-        pages = []
-        fieldnumber = 0
-        embed = discord.Embed(title="Motorsport Management", colour=discord.Colour(0xFF00FF))
-        embed.set_thumbnail(url='https://i.imgur.com/xJyIgAQ.png')
-        for x in classlist:
-            message = ""
-            for y in stocks:
-                if y['Class'] == x:
-                    message = message + "{} ({} Qty): ${:,d}\n".format(y['Name'], y['Stock'], y['Price'])
-            message = utils.chat_formatting.pagify(message, delims='\n', page_length=1000)
+        for i in range(1, len(list(vehicle_name))):
             try:
-                for num, value in enumerate(message, 1):
-                    embed.add_field(name="{} (Page {})".format(x, num), value="```\n" + value + "```", inline=False)
-                    fieldnumber = fieldnumber + 1
-            except:
-                pass
-            if fieldnumber > 4:
-                pages.append(embed)
-                fieldnumber = 0
-                embed = discord.Embed(title="Motorsport Management", colour=discord.Colour(0xFF00FF))
-        msg = await ctx.send('All the stock available in Motorsport Right now\n')
-        CONTROLS = {"⬅️": utils.menus.prev_page, "❌": utils.menus.close_menu, "➡️": utils.menus.next_page}
-        await utils.menus.menu(ctx, pages, CONTROLS, timeout=60.0)
-        themessage = await ctx.channel.history(after=msg.created_at, limit=1).flatten()
-        try:
-            await themessage[0].delete()
-        except:
-            pass
-        await msg.delete()
-
-    @commands.command(pass_context=True)
-    @commands.guild_only()
-    async def fstock(self, ctx, *, vehicle_name):
-        """
-        Used to search in-stock vehicle
-        """
-        msg = await ctx.send("Updating vehicle stocks")
-        shipment_channel = self.bot.get_channel(667348336277323787)
-        tokens = await self.database.guild(ctx.guild).Token()
-        await self.database.guild(ctx.guild).Stocks.set([])
-        try:
-            url = "https://api.eclipse-rp.net/basic/vehicledealerships"
-            payload = {}
-            headers = {
-            'Accept': 'application/json, text/plain, */*',
-            'DNT': '1',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
-            'token': tokens
-            }
-            response = requests.request("GET", url, headers=headers, data = payload)
-            data = response.json()
-            data = data['dealerships']
-        except:
-            await msg.edit(content="Error: Invalid Token. Geting new token...")
-            url = "https://api.eclipse-rp.net/auth/login"
-            with open('../data.txt') as thefile:
-                data = thefile.read()
-                payload = str(data).replace("\n", "")
-            headers = {
-            'Accept': 'application/json, text/plain, */*',
-            'DNT': '1',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
-            'Content-Type': 'application/json;charset=UTF-8'
-            }
-            response = requests.request("POST", url, headers=headers, data = payload)
-            result_token = response.json()['token']
-            await self.database.guild(ctx.guild).Token.set(str(result_token))
-            url = "https://api.eclipse-rp.net/basic/vehicledealerships"
-            payload = {}
-            headers = {
-            'Accept': 'application/json, text/plain, */*',
-            'DNT': '1',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
-            'token': str(result_token)
-            }
-            response = requests.request("GET", url, headers=headers, data = payload)
-            data = response.json()
-            data = data['dealerships']
-        async with self.database.guild(ctx.guild).Stocks() as stocks:
-            for x in data:
-                if x['Name'] == 'Motorsport':
-                    for y in x['VehicleStocks']:
-                        if y['v']['Stock'] != 0:
-                            stocks.append(y['v'])
-                if x['Name'] == 'DownTownBoats':
-                    for y in x['VehicleStocks']:
-                        if y['v']['Stock'] != 0:
-                            stocks.append(y['v'])
-        stocks = await self.database.guild(ctx.guild).Stocks()
-        sorted_stocks = sorted(stocks, key=lambda k: k['Name'])
-        await self.database.guild(ctx.guild).Stocks.set(sorted_stocks)
-        oldstocks = await self.database.guild(ctx.guild).OldStocks()
-        not_same = ''
-        price_change = ''
-        stock_change = ''
-        newstock_change = ''
-        all_change = ''
-        soldout_change = ''
-        for x in stocks:
-            newstock = True
-            for y in oldstocks:
-                if x["Vehicle"] == y["Vehicle"] and x['Price'] == y['Price'] and x['Stock'] == y['Stock']:
-                    newstock = False
-                elif x["Vehicle"] == y["Vehicle"] and x['Price'] != y['Price'] and x['Stock'] != y['Stock']:
-                    all_change = all_change + "❗️ New change to {}: Qty {} > {} and Price {} > {}\n".format(x['Name'], y['Stock'], x['Stock']
-                    , y['Price'], x['Price'])
-                    newstock = False
-                elif x["Vehicle"] == y["Vehicle"] and x['Price'] == y['Price'] and x['Stock'] != y['Stock']:
-                    stock_change = stock_change + "⚖️ New change to {}: Qty {} > {}\n".format(x['Name'], y['Stock'], x['Stock'])
-                    newstock = False
-                elif x["Vehicle"] == y["Vehicle"] and x['Price'] != y['Price'] and x['Stock'] == y['Stock']:
-                    price_change = price_change + "💵 New change to {}: Price {} > {}\n".format(x['Name'], y['Price'], x['Price'])
-                    newstock = False
-            if newstock is True:
-                newstock_change = newstock_change + "🚛 New stock arrived for {}: Qty {} and Price {}\n".format(x['Name'], x['Stock'], x['Price'])
-        for x in oldstocks:
-            if not any(d['Vehicle'] == x['Vehicle'] for d in stocks):
-                soldout_change = soldout_change + "📢 This item has sold out! {}\n".format(x['Name'])
-        try:
-            not_same = newstock_change + stock_change + price_change + all_change + soldout_change
-            await shipment_channel.send(not_same)
-        except:
-            pass
-        await self.database.guild(ctx.guild).OldStocks.set(sorted_stocks)
-        await msg.edit(content="Stock has been updated.")
-        async with self.database.guild(ctx.guild).Stocks() as stocks:
-            car_list = [d['Name'] for d in stocks]
-        car_name_matched = process.extractBests(vehicle_name, car_list, score_cutoff=80, limit=2)
-        not_matched = False
-        multiple_match = False
-        if str(car_name_matched) == '[]':
-            not_matched = True
-        if len(list(car_name_matched)) > 1 and car_name_matched[0][1] != 100:
-            multiple_match = True
-        if not_matched == False and multiple_match != True:
-            stocks = await self.database.guild(ctx.guild).Stocks()
-            for stock in stocks:
-                if stock['Name'] == car_name_matched[0][0]:
-                    await ctx.send("I have found {} {} in-stock for ${:,d}".format(stock['Stock'], stock['Name'], stock['Price']))
-        else:
-            if multiple_match != True:
-                thesimilarresult = "__**Other vehicles in-stock**__\n"
-                # car_list_new = {n.lower(): n for n in car_list}
-                # car_name_matched = [car_list_new[r] for r in difflib.get_close_matches(car_name.lower(), car_list_new, 5, 0.5)]
-                car_name_matched = process.extract(vehicle_name, car_list, limit=5)
-                if car_name_matched[0][0] != "Vehicle Name":
-                    for i in range(len(list(car_name_matched))):
-                        thesimilarresult = thesimilarresult + str(car_name_matched[i][0]) + "\n"
-                    await ctx.send("""**Vehicle not found.\nThe vehicle might not be in-stock. Place your order by `!order`**\n\n""" + thesimilarresult)
-                else:
-                    await ctx.send("""**Vehicle not found.\nThe vehicle might not be in-stock. Place your order by `!order`**\n\n""")
-            else:
-                await ctx.send("""**I have matched more than one result.**\n{} ({}%)\n{} ({}%)""".format(car_name_matched[0][0], car_name_matched[0][1], car_name_matched[1][0], car_name_matched[1][1]))
-
-    @commands.command(pass_context=True)
-    @commands.guild_only()
-    async def fallstock(self, ctx):
-        msg = await ctx.send("Updating vehicle stocks")
-        shipment_channel = self.bot.get_channel(667348336277323787)
-        tokens = await self.database.guild(ctx.guild).Token()
-        await self.database.guild(ctx.guild).Stocks.set([])
-        try:
-            url = "https://api.eclipse-rp.net/basic/vehicledealerships"
-            payload = {}
-            headers = {
-            'Accept': 'application/json, text/plain, */*',
-            'DNT': '1',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
-            'token': tokens
-            }
-            response = requests.request("GET", url, headers=headers, data = payload)
-            data = response.json()
-            data = data['dealerships']
-        except:
-            await msg.edit(content="Error: Invalid Token. Geting new token...")
-            url = "https://api.eclipse-rp.net/auth/login"
-            with open('../data.txt') as thefile:
-                data = thefile.read()
-                payload = str(data).replace("\n", "")
-            headers = {
-            'Accept': 'application/json, text/plain, */*',
-            'DNT': '1',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
-            'Content-Type': 'application/json;charset=UTF-8'
-            }
-            response = requests.request("POST", url, headers=headers, data = payload)
-            result_token = response.json()['token']
-            await self.database.guild(ctx.guild).Token.set(str(result_token))
-            url = "https://api.eclipse-rp.net/basic/vehicledealerships"
-            payload = {}
-            headers = {
-            'Accept': 'application/json, text/plain, */*',
-            'DNT': '1',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
-            'token': str(result_token)
-            }
-            response = requests.request("GET", url, headers=headers, data = payload)
-            data = response.json()
-            data = data['dealerships']
-        async with self.database.guild(ctx.guild).Stocks() as stocks:
-            for x in data:
-                if x['Name'] == 'Motorsport':
-                    for y in x['VehicleStocks']:
-                        if y['v']['Stock'] != 0:
-                            stocks.append(y['v'])
-                if x['Name'] == 'DownTownBoats':
-                    for y in x['VehicleStocks']:
-                        if y['v']['Stock'] != 0:
-                            stocks.append(y['v'])
-        stocks = await self.database.guild(ctx.guild).Stocks()
-        sorted_stocks = sorted(stocks, key=lambda k: k['Name'])
-        await self.database.guild(ctx.guild).Stocks.set(sorted_stocks)
-        oldstocks = await self.database.guild(ctx.guild).OldStocks()
-        not_same = ''
-        price_change = ''
-        stock_change = ''
-        newstock_change = ''
-        all_change = ''
-        soldout_change = ''
-        for x in stocks:
-            newstock = True
-            for y in oldstocks:
-                if x["Vehicle"] == y["Vehicle"] and x['Price'] == y['Price'] and x['Stock'] == y['Stock']:
-                    newstock = False
-                elif x["Vehicle"] == y["Vehicle"] and x['Price'] != y['Price'] and x['Stock'] != y['Stock']:
-                    all_change = all_change + "❗️ New change to {}: Qty {} > {} and Price {} > {}\n".format(x['Name'], y['Stock'], x['Stock']
-                    , y['Price'], x['Price'])
-                    newstock = False
-                elif x["Vehicle"] == y["Vehicle"] and x['Price'] == y['Price'] and x['Stock'] != y['Stock']:
-                    stock_change = stock_change + "⚖️ New change to {}: Qty {} > {}\n".format(x['Name'], y['Stock'], x['Stock'])
-                    newstock = False
-                elif x["Vehicle"] == y["Vehicle"] and x['Price'] != y['Price'] and x['Stock'] == y['Stock']:
-                    price_change = price_change + "💵 New change to {}: Price {} > {}\n".format(x['Name'], y['Price'], x['Price'])
-                    newstock = False
-            if newstock is True:
-                newstock_change = newstock_change + "🚛 New stock arrived for {}: Qty {} and Price {}\n".format(x['Name'], x['Stock'], x['Price'])
-        for x in oldstocks:
-            if not any(d['Vehicle'] == x['Vehicle'] for d in stocks):
-                soldout_change = soldout_change + "📢 This item has sold out! {}\n".format(x['Name'])
-        try:
-            not_same = newstock_change + stock_change + price_change + all_change + soldout_change
-            await shipment_channel.send(not_same)
-        except:
-            pass
-        await self.database.guild(ctx.guild).OldStocks.set(sorted_stocks)
-        await msg.edit(content="Stock has been updated.")
-        # message = 'All the stock available in Motorsport Right now\n'
-        stocks = await self.database.guild(ctx.guild).Stocks()
-        classlist = [x['Class'] for x in stocks]
-        classlist = list(dict.fromkeys(classlist))
-        pages = []
-        fieldnumber = 0
-        embed = discord.Embed(title="Motorsport Management", colour=discord.Colour(0xFF00FF))
-        embed.set_thumbnail(url='https://i.imgur.com/xJyIgAQ.png')
-        for x in classlist:
-            message = ""
-            for y in stocks:
-                if y['Class'] == x:
-                    message = message + "{} ({} Qty): ${:,d}\n".format(y['Name'], y['Stock'], y['Price'])
-            message = utils.chat_formatting.pagify(message, delims='\n', page_length=1000)
-            try:
-                for num, value in enumerate(message, 1):
-                    embed.add_field(name="{} (Page {})".format(x, num), value="```\n" + value + "```", inline=False)
-                    fieldnumber = fieldnumber + 1
-            except:
-                pass
-            if fieldnumber > 4:
-                pages.append(embed)
-                fieldnumber = 0
-                embed = discord.Embed(title="Motorsport Management", colour=discord.Colour(0xFF00FF))
-        CONTROLS = {"⬅️": utils.menus.prev_page, "❌": utils.menus.close_menu, "➡️": utils.menus.next_page}
-        await utils.menus.menu(ctx, pages, CONTROLS, timeout=60.0)
-        themessage = await ctx.channel.history(after=msg.created_at, limit=1).flatten()
-        try:
-            await themessage[0].delete()
-        except:
-            pass
-        await msg.delete()
-        # for allstocks in stocks:
-        #     if counting < 10:
-        #         message = message + "{} ({} Qty): ${:,d}\n".format(allstocks['Name'], allstocks['Stock'], allstocks['Price'])
-        #         counting = counting + 1
-        #     else:
-        #         await ctx.send(message)
-        #         message = ''
-        #         counting = 0
-        # if counting > 0:
-        #     await ctx.send(message)
+                price_value = price[i].replace("$ ", "").replace(",", "")
+                price_value = int(float(price_value))
+                vip_price_value = vip_price[i].replace("$ ", "").replace(",", "")
+                vip_price_value = int(float(vip_price_value))
+            except ValueError:
+                price_value = None
+                vip_price_value = None
+            veh_price.append(
+                {
+                    "Name": vehicle_name[i],
+                    "Price": {
+                        "Normal": price_value,
+                        "VIP": vip_price_value,
+                        "Cost": None,
+                        "Stock_Price": None,
+                    },
+                    "Speed": {
+                        "Laptime": {"Overall": None, "Class": None, "Value": None,},
+                        "Top_Speed": {"Overall": None, "Class": None, "Value": None,},
+                    },
+                    "Storage":{
+                        "Glovebox": glovebox[i],
+                        "Trunk": trunk[i]
+                        
+                    },
+                    "Type": types[i],
+                    "Brand": brand[i],
+                    "Capacity": capacity[i],
+                    "Drive": drive[i],
+                    "Vehicle Image": vehicle_image[i],
+                    "Brand Image": brand_image[i],
+                    "Performance Image": performance_image[i],
+                    "Stock": None,
+                    "For_Sale": for_sale[i]
+                }
+            )
+        return veh_price
     
-    @commands.command(pass_context=True)
-    @commands.guild_only()
-    async def checkprice(self, ctx):
-        msg = await ctx.send("Updating vehicle stocks")
-        shipment_channel = self.bot.get_channel(667348336277323787)
-        tokens = await self.database.guild(ctx.guild).Token()
-        await self.database.guild(ctx.guild).Stocks.set([])
+    async def vehicle_stock(self):
+        print("Get stock")
+        guild = self.bot.get_guild(341928926098096138)
+        tokens = await self.database.guild(guild).Token()
         try:
             url = "https://api.eclipse-rp.net/basic/vehicledealerships"
             payload = {}
@@ -389,9 +110,8 @@ class MOTORSPORT_DATABASE(commands.Cog):
             data = response.json()
             data = data['dealerships']
         except:
-            await msg.edit(content="Error: Invalid Token. Geting new token...")
             url = "https://api.eclipse-rp.net/auth/login"
-            with open('../data.txt') as thefile:
+            with open('data.txt') as thefile:
                 data = thefile.read()
                 payload = str(data).replace("\n", "")
             headers = {
@@ -402,7 +122,7 @@ class MOTORSPORT_DATABASE(commands.Cog):
             }
             response = requests.request("POST", url, headers=headers, data = payload)
             result_token = response.json()['token']
-            await self.database.guild(ctx.guild).Token.set(str(result_token))
+            await self.database.guild(guild).Token.set(str(result_token))
             url = "https://api.eclipse-rp.net/basic/vehicledealerships"
             payload = {}
             headers = {
@@ -413,272 +133,229 @@ class MOTORSPORT_DATABASE(commands.Cog):
             }
             response = requests.request("GET", url, headers=headers, data = payload)
             data = response.json()
-            data = data['dealerships']
-        async with self.database.guild(ctx.guild).Stocks() as stocks:
-            for x in data:
-                if x['Name'] == 'Motorsport':
-                    for y in x['VehicleStocks']:
-                        if y['v']['Stock'] != 0:
-                            stocks.append(y['v'])
-                if x['Name'] == 'DownTownBoats':
-                    for y in x['VehicleStocks']:
-                        if y['v']['Stock'] != 0:
-                            stocks.append(y['v'])
-        stocks = await self.database.guild(ctx.guild).Stocks()
-        sorted_stocks = sorted(stocks, key=lambda k: k['Name'])
-        await self.database.guild(ctx.guild).Stocks.set(sorted_stocks)
-        oldstocks = await self.database.guild(ctx.guild).OldStocks()
-        not_same = ''
-        price_change = ''
-        stock_change = ''
-        newstock_change = ''
-        all_change = ''
-        soldout_change = ''
-        counting = 0
-        for x in stocks:
-            newstock = True
-            for y in oldstocks:
-                if x["Vehicle"] == y["Vehicle"] and x['Price'] == y['Price'] and x['Stock'] == y['Stock']:
-                    newstock = False
-                elif x["Vehicle"] == y["Vehicle"] and x['Price'] != y['Price'] and x['Stock'] != y['Stock']:
-                    all_change = all_change + "❗️ New change to {}: Qty {} > {} and Price {} > {}\n".format(x['Name'], y['Stock'], x['Stock']
-                    , y['Price'], x['Price'])
-                    newstock = False
-                elif x["Vehicle"] == y["Vehicle"] and x['Price'] == y['Price'] and x['Stock'] != y['Stock']:
-                    stock_change = stock_change + "⚖️ New change to {}: Qty {} > {}\n".format(x['Name'], y['Stock'], x['Stock'])
-                    newstock = False
-                elif x["Vehicle"] == y["Vehicle"] and x['Price'] != y['Price'] and x['Stock'] == y['Stock']:
-                    price_change = price_change + "💵 New change to {}: Price {} > {}\n".format(x['Name'], y['Price'], x['Price'])
-                    newstock = False
-            if newstock is True:
-                newstock_change = newstock_change + "🚛 New stock arrived for {}: Qty {} and Price {}\n".format(x['Name'], x['Stock'], x['Price'])
-        for x in oldstocks:
-            if not any(d['Vehicle'] == x['Vehicle'] for d in stocks):
-                soldout_change = soldout_change + "📢 This item has sold out! {}\n".format(x['Name'])
-        try:
-            not_same = newstock_change + stock_change + price_change + all_change + soldout_change
-            await shipment_channel.send(not_same)
-        except:
-            pass
-        await self.database.guild(ctx.guild).OldStocks.set(sorted_stocks)
-        await msg.edit(content="Stock has been updated.")
-        counting = 0
-        message = ""
-        oldstocks = await self.database.guild(ctx.guild).OldStocks()
-        Prices = await self.prices.guild(ctx.guild).Prices()
-        category = [a['Type'] for a in oldstocks]
-        category = list(dict.fromkeys(category))
-        detected = False
-        for z in category:
-            message = "```fix\n{}```\n>>> ".format(z)
-            counting = 0
-            for x in oldstocks:
-                for y in Prices:
-                    if x['Name'] == y['Vehicle Name'] and ' $ {:,} '.format(x['Price']) != y['Price'] and x['Type'] == z:
-                        message = message + "**{}** has the wrong price set (${:,}).\nCorrect Price:```{}```".format(x['Name'], x['Price'], y['Price'].replace(',','').replace('$','').replace(' ',''))
-                        detected = True
-                        if counting < 10:
-                            counting = counting + 1
-                        else:
-                            await ctx.send(message)
-                            message = '>>> '
-                            counting = 0
-            if counting > 0:
-                await ctx.send(message)
-        if detected is False:
-            await ctx.send("If you see nothing. That's mean the price is right :D")
-            
-    @commands.command(pass_context=True)
-    @commands.guild_only()
-    @commands.has_any_role("Owner", "Bot-Developer", "Bot-Admin")
-    async def updatestocks(self, ctx):
-        msg = await ctx.send("Updating vehicle stocks")
-        shipment_channel = self.bot.get_channel(667348336277323787)
-        tokens = await self.database.guild(ctx.guild).Token()
-        await self.database.guild(ctx.guild).Stocks.set([])
-        try:
-            url = "https://api.eclipse-rp.net/basic/vehicledealerships"
-            payload = {}
-            headers = {
-            'Accept': 'application/json, text/plain, */*',
-            'DNT': '1',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
-            'token': tokens
-            }
-            response = requests.request("GET", url, headers=headers, data = payload)
-            data = response.json()
-            data = data['dealerships']
-        except:
-            await msg.edit(content="Error: Invalid Token. Geting new token...")
-            url = "https://api.eclipse-rp.net/auth/login"
-            with open('../data.txt') as thefile:
-                data = thefile.read()
-                payload = str(data).replace("\n", "")
-            headers = {
-            'Accept': 'application/json, text/plain, */*',
-            'DNT': '1',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
-            'Content-Type': 'application/json;charset=UTF-8'
-            }
-            response = requests.request("POST", url, headers=headers, data = payload)
-            result_token = response.json()['token']
-            await self.database.guild(ctx.guild).Token.set(str(result_token))
-            url = "https://api.eclipse-rp.net/basic/vehicledealerships"
-            payload = {}
-            headers = {
-            'Accept': 'application/json, text/plain, */*',
-            'DNT': '1',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
-            'token': str(result_token)
-            }
-            response = requests.request("GET", url, headers=headers, data = payload)
-            data = response.json()
-            data = data['dealerships']
-        async with self.database.guild(ctx.guild).Stocks() as stocks:
-            for x in data:
-                if x['Name'] == 'Motorsport':
-                    for y in x['VehicleStocks']:
-                        if y['v']['Stock'] != 0:
-                            stocks.append(y['v'])
-                if x['Name'] == 'DownTownBoats':
-                    for y in x['VehicleStocks']:
-                        if y['v']['Stock'] != 0:
-                            stocks.append(y['v'])
-        stocks = await self.database.guild(ctx.guild).Stocks()
-        sorted_stocks = sorted(stocks, key=lambda k: k['Name'])
-        await self.database.guild(ctx.guild).Stocks.set(sorted_stocks)
-        oldstocks = await self.database.guild(ctx.guild).OldStocks()
-        not_same = ''
-        price_change = ''
-        stock_change = ''
-        newstock_change = ''
-        all_change = ''
-        soldout_change = ''
-        for x in stocks:
-            newstock = True
-            for y in oldstocks:
-                if x["Vehicle"] == y["Vehicle"] and x['Price'] == y['Price'] and x['Stock'] == y['Stock']:
-                    newstock = False
-                elif x["Vehicle"] == y["Vehicle"] and x['Price'] != y['Price'] and x['Stock'] != y['Stock']:
-                    all_change = all_change + "❗️ New change to {}: Qty {} > {} and Price {} > {}\n".format(x['Name'], y['Stock'], x['Stock']
-                    , y['Price'], x['Price'])
-                    newstock = False
-                elif x["Vehicle"] == y["Vehicle"] and x['Price'] == y['Price'] and x['Stock'] != y['Stock']:
-                    stock_change = stock_change + "⚖️ New change to {}: Qty {} > {}\n".format(x['Name'], y['Stock'], x['Stock'])
-                    newstock = False
-                elif x["Vehicle"] == y["Vehicle"] and x['Price'] != y['Price'] and x['Stock'] == y['Stock']:
-                    price_change = price_change + "💵 New change to {}: Price {} > {}\n".format(x['Name'], y['Price'], x['Price'])
-                    newstock = False
-            if newstock is True:
-                newstock_change = newstock_change + "🚛 New stock arrived for {}: Qty {} and Price {}\n".format(x['Name'], x['Stock'], x['Price'])
-        for x in oldstocks:
-            if not any(d['Vehicle'] == x['Vehicle'] for d in stocks):
-                soldout_change = soldout_change + "📢 This item has sold out! {}\n".format(x['Name'])
-        try:
-            not_same = newstock_change + stock_change + price_change + all_change + soldout_change
-            await shipment_channel.send(not_same)
-        except:
-            pass
-        await self.database.guild(ctx.guild).OldStocks.set(sorted_stocks)
-        await msg.edit(content="Stock has been updated.")
+            data = data["dealerships"]
+        stocks = []
+        for x in data:
+            if x["Name"] == "Motorsport":
+                for y in x["VehicleStocks"]:
+                    if y["v"]["Stock"] != 0:
+                        stocks.append(y["v"])
+            if x["Name"] == "DownTownBoats":
+                for y in x["VehicleStocks"]:
+                    if y["v"]["Stock"] != 0:
+                        stocks.append(y["v"])
+        sorted_stocks = sorted(stocks, key=lambda k: k["Name"])
+        return sorted_stocks
+
+
+    async def vehicle_speed(self):
+        print("Get Speed")
+        sh = self.gc.open_by_url(
+            "https://docs.google.com/spreadsheets/d/1nQND3ikiLzS3Ij9kuV-rVkRtoYetb79c52JWyafb4m4"
+        )
+        wks = sh.worksheet("id", "60309153")
+        laptime_overall = wks.get_col(1, include_tailing_empty=False)
+        laptime_inclass = wks.get_col(2, include_tailing_empty=False)
+        vehicle_name_laptime = wks.get_col(4, include_tailing_empty=False)
+        laptime = wks.get_col(5, include_tailing_empty=False)
+        wks = sh.worksheet("id", "1859578320")
+        topspeed_overall = wks.get_col(1, include_tailing_empty=False)
+        topspeed_inclass = wks.get_col(2, include_tailing_empty=False)
+        vehicle_name_topspeed = wks.get_col(4, include_tailing_empty=False)
+        topspeed = wks.get_col(6, include_tailing_empty=False)
+        return laptime_overall, laptime_inclass, vehicle_name_laptime, laptime, topspeed_overall, topspeed_inclass, vehicle_name_topspeed, topspeed
+
+    
+    async def combinedata(self, veh_price, stocks, speed):
+        guild = self.bot.get_guild(341928926098096138)
+        laptime_overall, laptime_inclass, vehicle_name_laptime, laptime, topspeed_overall, topspeed_inclass, vehicle_name_topspeed, topspeed = speed
+
+        for x in veh_price:
+            imported = False
+            for y in stocks:
+                if y["Name"] == x["Name"]:
+                    x["Price"]["Cost"] = y["Cost"]
+                    x["Price"]["Stock_Price"] = y["Price"]
+                    x["Stock"] = y["Stock"]
+                    imported = True
+            if imported is False:
+                x["Price"]["Cost"] = None
+                x["Price"]["Stock_Price"] = None
+                x["Stock"] = None
+
+        importingerror = []
+        for x in veh_price:
+            try:
+                a = vehicle_name_laptime.index(x["Name"])
+                b = vehicle_name_topspeed.index(x["Name"])
+                value = float(topspeed[b]) * 1.60934
+                x["Speed"] = {
+                    "Laptime": {
+                        "Overall": laptime_overall[a],
+                        "Class": laptime_inclass[a],
+                        "Value": laptime[a],
+                    },
+                    "Top_Speed": {
+                        "Overall": topspeed_overall[b],
+                        "Class": topspeed_inclass[b],
+                        "Value": value,
+                    },
+                }
+            except ValueError:
+                importingerror.append(x)
+
+        for x in importingerror:
+            car_name_matched = process.extractBests(
+                x["Name"], vehicle_name_topspeed, score_cutoff=80, limit=1
+            )
+            try:
+                a = vehicle_name_laptime.index(car_name_matched[0][0])
+                b = vehicle_name_topspeed.index(car_name_matched[0][0])
+                value = float(topspeed[b]) * 1.60934
+                x["Speed"] = {
+                    "Laptime": {
+                        "Overall": laptime_overall[a],
+                        "Class": laptime_inclass[a],
+                        "Value": laptime[a],
+                    },
+                    "Top_Speed": {
+                        "Overall": topspeed_overall[b],
+                        "Class": topspeed_inclass[b],
+                        "Value": value,
+                    },
+                }
+            except ValueError:
+                error_log = error_log + x["Name"] + " not imported for speed\n"
+
+        for x in veh_price:
+            for y in importingerror:
+                if y['Name'] == x['Name']:
+                    x = y
+        await self.database.guild(guild).Vehicles.set(veh_price)
+        print("Done")
     
     @tasks.loop(seconds=300.0)
-    async def check_stock(self):
-        shipment_channel = self.bot.get_channel(667348336277323787)
-        print("Background Update Works")
-        guild_id = self.bot.get_guild(341928926098096138)
-        tokens = await self.database.guild(guild_id).Token()
-        await self.database.guild(guild_id).Stocks.set([])
-        try:
-            url = "https://api.eclipse-rp.net/basic/vehicledealerships"
-            payload = {}
-            headers = {
-            'Accept': 'application/json, text/plain, */*',
-            'DNT': '1',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
-            'token': tokens
-            }
-            response = requests.request("GET", url, headers=headers, data = payload)
-            data = response.json()
-            data = data['dealerships']
-        except:
-            url = "https://api.eclipse-rp.net/auth/login"
-            with open('../data.txt') as thefile:
-                data = thefile.read()
-                payload = str(data).replace("\n", "")
-            headers = {
-            'Accept': 'application/json, text/plain, */*',
-            'DNT': '1',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
-            'Content-Type': 'application/json;charset=UTF-8'
-            }
-            response = requests.request("POST", url, headers=headers, data = payload)
-            result_token = response.json()['token']
-            await self.database.guild(guild_id).Token.set(str(result_token))
-            url = "https://api.eclipse-rp.net/basic/vehicledealerships"
-            payload = {}
-            headers = {
-            'Accept': 'application/json, text/plain, */*',
-            'DNT': '1',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
-            'token': str(result_token)
-            }
-            response = requests.request("GET", url, headers=headers, data = payload)
-            data = response.json()
-            data = data['dealerships']
-        async with self.database.guild(guild_id).Stocks() as stocks:
-            for x in data:
-                if x['Name'] == 'Motorsport':
-                    for y in x['VehicleStocks']:
-                        if y['v']['Stock'] != 0:
-                            stocks.append(y['v'])
-                if x['Name'] == 'DownTownBoats':
-                    for y in x['VehicleStocks']:
-                        if y['v']['Stock'] != 0:
-                            stocks.append(y['v'])
-        stocks = await self.database.guild(guild_id).Stocks()
-        sorted_stocks = sorted(stocks, key=lambda k: k['Name'])
-        await self.database.guild(guild_id).Stocks.set(sorted_stocks)
-        print("Updated Stocks")
-        print("Comparing Stocks")
-
-        oldstocks = await self.database.guild(guild_id).OldStocks()
-        not_same = ''
-        price_change = ''
-        stock_change = ''
-        newstock_change = ''
-        all_change = ''
-        soldout_change = ''
-        for x in stocks:
-            newstock = True
-            for y in oldstocks:
-                if x["Vehicle"] == y["Vehicle"] and x['Price'] == y['Price'] and x['Stock'] == y['Stock']:
-                    newstock = False
-                elif x["Vehicle"] == y["Vehicle"] and x['Price'] != y['Price'] and x['Stock'] != y['Stock']:
-                    all_change = all_change + "❗️ New change to {}: Qty {} > {} and Price {} > {}\n".format(x['Name'], y['Stock'], x['Stock']
-                    , y['Price'], x['Price'])
-                    newstock = False
-                elif x["Vehicle"] == y["Vehicle"] and x['Price'] == y['Price'] and x['Stock'] != y['Stock']:
-                    stock_change = stock_change + "⚖️ New change to {}: Qty {} > {}\n".format(x['Name'], y['Stock'], x['Stock'])
-                    newstock = False
-                elif x["Vehicle"] == y["Vehicle"] and x['Price'] != y['Price'] and x['Stock'] == y['Stock']:
-                    price_change = price_change + "💵 New change to {}: Price {} > {}\n".format(x['Name'], y['Price'], x['Price'])
-                    newstock = False
-            if newstock is True:
-                newstock_change = newstock_change + "🚛 New stock arrived for {}: Qty {} and Price {}\n".format(x['Name'], x['Stock'], x['Price'])
-        for x in oldstocks:
-            if not any(d['Vehicle'] == x['Vehicle'] for d in stocks):
-                soldout_change = soldout_change + "📢 This item has sold out! {}\n".format(x['Name'])
-        print("Comparing Done")
-        try:
-            not_same = newstock_change + stock_change + price_change + all_change + soldout_change
-            await shipment_channel.send(not_same)
-        except:
-            pass
-        await self.database.guild(guild_id).OldStocks.set(sorted_stocks)
-        print("Done")
-
-    @check_stock.before_loop
-    async def before_check_stock(self):
+    async def update_vehicle(self):
+        veh_price = await self.vehicle_price()
+        stocks = await self.vehicle_stock()
+        speed = await self.vehicle_speed()
+        await self.combinedata(veh_price, stocks, speed)
+    
+    @update_vehicle.before_loop
+    async def before_update_vehicle(self):
         print('waiting...')
         await self.bot.wait_until_ready()
+    
+    @commands.command(pass_context=True)
+    async def updatevehicle(self, ctx):
+        await ctx.send("Please wait...")
+        veh_price = await self.vehicle_price()
+        stocks = await self.vehicle_stock()
+        speed = await self.vehicle_speed()
+        await ctx.send("Done getting data. Combine now")
+        await self.combinedata(veh_price, stocks, speed)
+
+    @commands.command(pass_context=True)
+    async def order(self, ctx):
+        await Order().order(ctx, car_name=None, database=self.database, ordering_channel=None)
+        
+    # @tasks.loop(seconds=300.0)
+    # async def check_stock(self):
+    #     shipment_channel = self.bot.get_channel(667348336277323787)
+    #     print("Background Update Works")
+    #     guild_id = self.bot.get_guild(341928926098096138)
+    #     tokens = await self.database.guild(guild_id).Token()
+    #     await self.database.guild(guild_id).Stocks.set([])
+    #     try:
+    #         url = "https://api.eclipse-rp.net/basic/vehicledealerships"
+    #         payload = {}
+    #         headers = {
+    #         'Accept': 'application/json, text/plain, */*',
+    #         'DNT': '1',
+    #         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
+    #         'token': tokens
+    #         }
+    #         response = requests.request("GET", url, headers=headers, data = payload)
+    #         data = response.json()
+    #         data = data['dealerships']
+    #     except:
+    #         url = "https://api.eclipse-rp.net/auth/login"
+    #         with open('../data.txt') as thefile:
+    #             data = thefile.read()
+    #             payload = str(data).replace("\n", "")
+    #         headers = {
+    #         'Accept': 'application/json, text/plain, */*',
+    #         'DNT': '1',
+    #         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
+    #         'Content-Type': 'application/json;charset=UTF-8'
+    #         }
+    #         response = requests.request("POST", url, headers=headers, data = payload)
+    #         result_token = response.json()['token']
+    #         await self.database.guild(guild_id).Token.set(str(result_token))
+    #         url = "https://api.eclipse-rp.net/basic/vehicledealerships"
+    #         payload = {}
+    #         headers = {
+    #         'Accept': 'application/json, text/plain, */*',
+    #         'DNT': '1',
+    #         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
+    #         'token': str(result_token)
+    #         }
+    #         response = requests.request("GET", url, headers=headers, data = payload)
+    #         data = response.json()
+    #         data = data['dealerships']
+    #     async with self.database.guild(guild_id).Stocks() as stocks:
+    #         for x in data:
+    #             if x['Name'] == 'Motorsport':
+    #                 for y in x['VehicleStocks']:
+    #                     if y['v']['Stock'] != 0:
+    #                         stocks.append(y['v'])
+    #             if x['Name'] == 'DownTownBoats':
+    #                 for y in x['VehicleStocks']:
+    #                     if y['v']['Stock'] != 0:
+    #                         stocks.append(y['v'])
+    #     stocks = await self.database.guild(guild_id).Stocks()
+    #     sorted_stocks = sorted(stocks, key=lambda k: k['Name'])
+    #     await self.database.guild(guild_id).Stocks.set(sorted_stocks)
+    #     print("Updated Stocks")
+    #     print("Comparing Stocks")
+
+    #     oldstocks = await self.database.guild(guild_id).OldStocks()
+    #     not_same = ''
+    #     price_change = ''
+    #     stock_change = ''
+    #     newstock_change = ''
+    #     all_change = ''
+    #     soldout_change = ''
+    #     for x in stocks:
+    #         newstock = True
+    #         for y in oldstocks:
+    #             if x["Vehicle"] == y["Vehicle"] and x['Price'] == y['Price'] and x['Stock'] == y['Stock']:
+    #                 newstock = False
+    #             elif x["Vehicle"] == y["Vehicle"] and x['Price'] != y['Price'] and x['Stock'] != y['Stock']:
+    #                 all_change = all_change + "❗️ New change to {}: Qty {} > {} and Price {} > {}\n".format(x['Name'], y['Stock'], x['Stock']
+    #                 , y['Price'], x['Price'])
+    #                 newstock = False
+    #             elif x["Vehicle"] == y["Vehicle"] and x['Price'] == y['Price'] and x['Stock'] != y['Stock']:
+    #                 stock_change = stock_change + "⚖️ New change to {}: Qty {} > {}\n".format(x['Name'], y['Stock'], x['Stock'])
+    #                 newstock = False
+    #             elif x["Vehicle"] == y["Vehicle"] and x['Price'] != y['Price'] and x['Stock'] == y['Stock']:
+    #                 price_change = price_change + "💵 New change to {}: Price {} > {}\n".format(x['Name'], y['Price'], x['Price'])
+    #                 newstock = False
+    #         if newstock is True:
+    #             newstock_change = newstock_change + "🚛 New stock arrived for {}: Qty {} and Price {}\n".format(x['Name'], x['Stock'], x['Price'])
+    #     for x in oldstocks:
+    #         if not any(d['Vehicle'] == x['Vehicle'] for d in stocks):
+    #             soldout_change = soldout_change + "📢 This item has sold out! {}\n".format(x['Name'])
+    #     print("Comparing Done")
+    #     try:
+    #         not_same = newstock_change + stock_change + price_change + all_change + soldout_change
+    #         await shipment_channel.send(not_same)
+    #     except:
+    #         pass
+    #     await self.database.guild(guild_id).OldStocks.set(sorted_stocks)
+    #     print("Done")
+
+    # @check_stock.before_loop
+    # async def before_check_stock(self):
+    #     print('waiting...')
+    #     await self.bot.wait_until_ready()
