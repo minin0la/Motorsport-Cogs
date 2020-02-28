@@ -420,8 +420,8 @@ class Motorsport(Order, Database, commands.Cog):
                     async with self.membershipdb.member(member).Orders() as orders:
                         orders.append(
                             {
-                                "Order_ID": x.id,
-                                "Vehicle_Name": car_name,
+                                "msg_id": x.id,
+                                "Name": car_name,
                                 "Price": price,
                                 "Status": "Completed",
                             }
