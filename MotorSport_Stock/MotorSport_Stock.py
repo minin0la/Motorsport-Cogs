@@ -132,7 +132,7 @@ class MOTORSPORT_STOCK(commands.Cog):
         except:
             await msg.edit(content="Error: Invalid Token. Geting new token...")
             url = "https://api.eclipse-rp.net/auth/login"
-            with open('../data.txt') as thefile:
+            with open('data.txt') as thefile:
                 data = thefile.read()
                 payload = str(data).replace("\n", "")
             headers = {
@@ -253,7 +253,7 @@ class MOTORSPORT_STOCK(commands.Cog):
         except:
             await msg.edit(content="Error: Invalid Token. Geting new token...")
             url = "https://api.eclipse-rp.net/auth/login"
-            with open('../data.txt') as thefile:
+            with open('data.txt') as thefile:
                 data = thefile.read()
                 payload = str(data).replace("\n", "")
             headers = {
@@ -388,7 +388,7 @@ class MOTORSPORT_STOCK(commands.Cog):
         except:
             await msg.edit(content="Error: Invalid Token. Geting new token...")
             url = "https://api.eclipse-rp.net/auth/login"
-            with open('../data.txt') as thefile:
+            with open('data.txt') as thefile:
                 data = thefile.read()
                 payload = str(data).replace("\n", "")
             headers = {
@@ -508,7 +508,7 @@ class MOTORSPORT_STOCK(commands.Cog):
         except:
             await msg.edit(content="Error: Invalid Token. Geting new token...")
             url = "https://api.eclipse-rp.net/auth/login"
-            with open('../data.txt') as thefile:
+            with open('data.txt') as thefile:
                 data = thefile.read()
                 payload = str(data).replace("\n", "")
             headers = {
@@ -600,7 +600,7 @@ class MOTORSPORT_STOCK(commands.Cog):
             data = data['dealerships']
         except:
             url = "https://api.eclipse-rp.net/auth/login"
-            with open('../data.txt') as thefile:
+            with open('data.txt') as thefile:
                 data = thefile.read()
                 payload = str(data).replace("\n", "")
             headers = {

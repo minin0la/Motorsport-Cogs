@@ -111,5 +111,6 @@ dmypy.json
 
 # End of https://www.gitignore.io/api/python
 
-/MotorSport_Customers/data/users
+/Motorsport/data/users
 /testing
+/MotorSport_Customers/data/users
