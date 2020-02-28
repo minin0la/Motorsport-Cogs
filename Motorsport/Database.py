@@ -14,14 +14,10 @@ from fuzzywuzzy import process
 import pygsheets
 import random
 
-from .Order import Order
-
-class MOTORSPORT_DATABASE(commands.Cog):
+class Database:
     """Motorsport Database System"""
 
-    def __init__(self, bot):
-        self.bot = bot
-        # self.update_vehicle.start()
+    def __init__(self):
         self.database = Config.get_conf(self, identifier=1)
         data = {"Vehicles": [],
                 "OldStocks": [],
@@ -29,10 +25,24 @@ class MOTORSPORT_DATABASE(commands.Cog):
         }
         self.database.register_guild(**data)
         self.gc = pygsheets.authorize(service_file="client_secret.json")
-        super().__init__()
-    
-    def cog_unload(self):
-        self.update_vehicle.cancel()
+        self.membershipdb = Config.get_conf(self, identifier=1)
+        data = {"Name": "", "MemberID": "", "Orders": [], "Spent": 0, "Joined_Date": ""}
+        self.membershipdb.register_member(**data)
+        self.cardlist = {
+            "Customers": "Customers",
+            "Weazel News Partner": "Partner_Client",
+            "Los Santos Custom Partner": "Partner_Client",
+            "VIP": "VIP",
+            "Partners": "Partners",
+            "Graphic Designer": "Designer",
+            "Founders": "Founders",
+            "Assistant": "Assistant",
+            "Assistant Manager": "Management",
+            "Manager": "Management",
+            "Bot-Developer": "Developer",
+            "Co-Owner": "Co-Owner",
+            "Owner": "Owner",
+        }
 
     async def vehicle_price(self):
         print("Get Price")
@@ -164,7 +174,6 @@ class MOTORSPORT_DATABASE(commands.Cog):
         vehicle_name_topspeed = wks.get_col(4, include_tailing_empty=False)
         topspeed = wks.get_col(6, include_tailing_empty=False)
         return laptime_overall, laptime_inclass, vehicle_name_laptime, laptime, topspeed_overall, topspeed_inclass, vehicle_name_topspeed, topspeed
-
     
     async def combinedata(self, veh_price, stocks, speed):
         guild = self.bot.get_guild(341928926098096138)
@@ -231,33 +240,69 @@ class MOTORSPORT_DATABASE(commands.Cog):
             for y in importingerror:
                 if y['Name'] == x['Name']:
                     x = y
-        await self.database.guild(guild).Vehicles.set(veh_price)
-        print("Done")
-    
-    @tasks.loop(seconds=300.0)
-    async def update_vehicle(self):
-        veh_price = await self.vehicle_price()
-        stocks = await self.vehicle_stock()
-        speed = await self.vehicle_speed()
-        await self.combinedata(veh_price, stocks, speed)
-    
-    @update_vehicle.before_loop
-    async def before_update_vehicle(self):
-        print('waiting...')
-        await self.bot.wait_until_ready()
-    
-    @commands.command(pass_context=True)
-    async def updatevehicle(self, ctx):
-        await ctx.send("Please wait...")
-        veh_price = await self.vehicle_price()
-        stocks = await self.vehicle_stock()
-        speed = await self.vehicle_speed()
-        await ctx.send("Done getting data. Combine now")
-        await self.combinedata(veh_price, stocks, speed)
+        return veh_price
 
-    @commands.command(pass_context=True)
-    async def order(self, ctx):
-        await Order().order(ctx, car_name=None, database=self.database, ordering_channel=None)
+    async def comparingstocks(self, veh_price):
+        shipment_channel = self.bot.get_channel(667348336277323787)
+        guild = self.bot.get_guild(341928926098096138)
+        oldstocks = await self.database.guild(guild).Vehicles()
+        if oldstocks:
+            not_same = ''
+            price_change = ''
+            stock_change = ''
+            newstock_change = ''
+            all_change = ''
+            soldout_change = ''
+            for x in veh_price:
+                for y in oldstocks:
+                    if x["Name"] == y["Name"]:
+                        if x['Stock'] is None and y['Stock'] is not None:
+                            soldout_change = soldout_change + "📢 This item has sold out! {}\n".format(x['Name'])
+                        elif x['Stock'] is not None and y['Stock'] is None:
+                            newstock_change = newstock_change + "🚛 New stock arrived for {}: Qty {} and Price {} {}\n".format(x['Name'], x['Stock'], x['Price']['Normal'], "✅" if x['Price']['Normal'] == x['Price']['Stock_Price'] else "")
+                        elif x['Stock'] is not None and y['Stock'] is not None:        
+                            if x['Price']['Stock_Price'] != y['Price']['Stock_Price']:
+                                price_change = price_change + "💵 New change to {}: Price {} > {} {}\n".format(x['Name'], y['Price'], x['Price']['Normal'], "✅" if x['Price']['Normal'] == x['Price']['Stock_Price'] else "")
+                            if x['Stock']!= y['Stock']:
+                                stock_change = stock_change + "⚖️ New change to {}: Qty {} > {}\n".format(x['Name'], y['Stock'], x['Stock'])
+            not_same = newstock_change + stock_change + price_change + all_change + soldout_change
+            not_same = utils.chat_formatting.pagify(not_same, delims="\n")
+            for x in not_same:
+                await shipment_channel.send(x)
+        
+        await self.database.guild(guild).Vehicles.set(veh_price)
+        print("Done")    
+
+    async def get_vehicle(self, ctx, car_name):
+        prices = await self.database.guild(ctx.guild).Vehicles()
+        car_list = [d['Name'] for d in prices]
+        selected_veh = None
+        multiple_match_embed = None
+        car_name_matched = process.extractBests(car_name, car_list, score_cutoff=80, limit=2)
+        matched = False
+        multiple_match = False
+        if car_name_matched:
+            matched = True
+        if len(list(car_name_matched)) > 1 and car_name_matched[0][1] != 100:
+            multiple_match = True
+        if matched is True and multiple_match is not True:
+            for price in prices:
+                if price["Name"] == car_name_matched[0][0]:
+                    selected_veh = price
+        else:
+            if multiple_match is not True:
+                thesimilarresult = ""
+                car_name_matched = process.extract(car_name, car_list, limit=5)
+                for i in range(len(list(car_name_matched))):
+                    thesimilarresult = thesimilarresult + str(car_name_matched[i][0]) + ' ' + "(" + str(car_name_matched[i][1]) + "%)\n"
+                embed = discord.Embed(colour=discord.Colour(0x984c87), description='```{}```'.format(thesimilarresult))
+                embed.set_author(name="""Vehicle not found\nTry to provide more details on your search\n\n""", icon_url="https://media.discordapp.net/attachments/341936003029794826/342238781874896897/DuluxeMotorsportLogo2.png")
+                multiple_match_embed = embed
+            else:
+                embed = discord.Embed(colour=discord.Colour(0x984c87), description='```{} ({}%)\n{} ({}%)```'.format(car_name_matched[0][0], car_name_matched[0][1], car_name_matched[1][0], car_name_matched[1][1]))
+                embed.set_author(name="""I have matched more than one result.""", icon_url="https://media.discordapp.net/attachments/341936003029794826/342238781874896897/DuluxeMotorsportLogo2.png")
+                multiple_match_embed = embed
+        return selected_veh, multiple_match_embed
         
     # @tasks.loop(seconds=300.0)
     # async def check_stock(self):
