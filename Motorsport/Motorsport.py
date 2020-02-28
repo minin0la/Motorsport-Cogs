@@ -645,7 +645,7 @@ class Membership(Database):
         img_loc = str(bundled_data_path(self) / card_loc)
         img = Image.open(img_loc)
         draw = ImageDraw.Draw(img)
-        font_loc = str(bundled_data_path(self) / "template/BebasNeue.ttf")
+        font_loc = str(bundled_data_path(self) / "template/BebasNeue.TTF")
         font = ImageFont.truetype(font_loc, 24)
         msg = name
         draw.text((650, 183), msg, (44, 44, 44), font=font)
