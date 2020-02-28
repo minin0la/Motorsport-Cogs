@@ -31,7 +31,7 @@ class Motorsport(Order, Database, commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        # self.update_vehicle.start()
+        self.update_vehicle.start()
         super().__init__()
     
     def cog_unload(self):

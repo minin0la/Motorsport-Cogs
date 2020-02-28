@@ -24,7 +24,7 @@ class Database:
                 "Token": "",
         }
         self.database.register_guild(**data)
-        self.gc = pygsheets.authorize(service_file="client_secret.json")
+        self.gc = pygsheets.authorize(service_file="/root/client_secret.json")
         self.membershipdb = Config.get_conf(self, identifier=1)
         data = {"Name": "", "MemberID": "", "Orders": [], "Spent": 0, "Joined_Date": ""}
         self.membershipdb.register_member(**data)
@@ -121,7 +121,7 @@ class Database:
             data = data['dealerships']
         except:
             url = "https://api.eclipse-rp.net/auth/login"
-            with open('data.txt') as thefile:
+            with open('/root/data.txt') as thefile:
                 data = thefile.read()
                 payload = str(data).replace("\n", "")
             headers = {
@@ -303,104 +303,3 @@ class Database:
                 embed.set_author(name="""I have matched more than one result.""", icon_url="https://media.discordapp.net/attachments/341936003029794826/342238781874896897/DuluxeMotorsportLogo2.png")
                 multiple_match_embed = embed
         return selected_veh, multiple_match_embed
-        
-    # @tasks.loop(seconds=300.0)
-    # async def check_stock(self):
-    #     shipment_channel = self.bot.get_channel(667348336277323787)
-    #     print("Background Update Works")
-    #     guild_id = self.bot.get_guild(341928926098096138)
-    #     tokens = await self.database.guild(guild_id).Token()
-    #     await self.database.guild(guild_id).Stocks.set([])
-    #     try:
-    #         url = "https://api.eclipse-rp.net/basic/vehicledealerships"
-    #         payload = {}
-    #         headers = {
-    #         'Accept': 'application/json, text/plain, */*',
-    #         'DNT': '1',
-    #         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
-    #         'token': tokens
-    #         }
-    #         response = requests.request("GET", url, headers=headers, data = payload)
-    #         data = response.json()
-    #         data = data['dealerships']
-    #     except:
-    #         url = "https://api.eclipse-rp.net/auth/login"
-    #         with open('../data.txt') as thefile:
-    #             data = thefile.read()
-    #             payload = str(data).replace("\n", "")
-    #         headers = {
-    #         'Accept': 'application/json, text/plain, */*',
-    #         'DNT': '1',
-    #         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
-    #         'Content-Type': 'application/json;charset=UTF-8'
-    #         }
-    #         response = requests.request("POST", url, headers=headers, data = payload)
-    #         result_token = response.json()['token']
-    #         await self.database.guild(guild_id).Token.set(str(result_token))
-    #         url = "https://api.eclipse-rp.net/basic/vehicledealerships"
-    #         payload = {}
-    #         headers = {
-    #         'Accept': 'application/json, text/plain, */*',
-    #         'DNT': '1',
-    #         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
-    #         'token': str(result_token)
-    #         }
-    #         response = requests.request("GET", url, headers=headers, data = payload)
-    #         data = response.json()
-    #         data = data['dealerships']
-    #     async with self.database.guild(guild_id).Stocks() as stocks:
-    #         for x in data:
-    #             if x['Name'] == 'Motorsport':
-    #                 for y in x['VehicleStocks']:
-    #                     if y['v']['Stock'] != 0:
-    #                         stocks.append(y['v'])
-    #             if x['Name'] == 'DownTownBoats':
-    #                 for y in x['VehicleStocks']:
-    #                     if y['v']['Stock'] != 0:
-    #                         stocks.append(y['v'])
-    #     stocks = await self.database.guild(guild_id).Stocks()
-    #     sorted_stocks = sorted(stocks, key=lambda k: k['Name'])
-    #     await self.database.guild(guild_id).Stocks.set(sorted_stocks)
-    #     print("Updated Stocks")
-    #     print("Comparing Stocks")
-
-    #     oldstocks = await self.database.guild(guild_id).OldStocks()
-    #     not_same = ''
-    #     price_change = ''
-    #     stock_change = ''
-    #     newstock_change = ''
-    #     all_change = ''
-    #     soldout_change = ''
-    #     for x in stocks:
-    #         newstock = True
-    #         for y in oldstocks:
-    #             if x["Vehicle"] == y["Vehicle"] and x['Price'] == y['Price'] and x['Stock'] == y['Stock']:
-    #                 newstock = False
-    #             elif x["Vehicle"] == y["Vehicle"] and x['Price'] != y['Price'] and x['Stock'] != y['Stock']:
-    #                 all_change = all_change + "❗️ New change to {}: Qty {} > {} and Price {} > {}\n".format(x['Name'], y['Stock'], x['Stock']
-    #                 , y['Price'], x['Price'])
-    #                 newstock = False
-    #             elif x["Vehicle"] == y["Vehicle"] and x['Price'] == y['Price'] and x['Stock'] != y['Stock']:
-    #                 stock_change = stock_change + "⚖️ New change to {}: Qty {} > {}\n".format(x['Name'], y['Stock'], x['Stock'])
-    #                 newstock = False
-    #             elif x["Vehicle"] == y["Vehicle"] and x['Price'] != y['Price'] and x['Stock'] == y['Stock']:
-    #                 price_change = price_change + "💵 New change to {}: Price {} > {}\n".format(x['Name'], y['Price'], x['Price'])
-    #                 newstock = False
-    #         if newstock is True:
-    #             newstock_change = newstock_change + "🚛 New stock arrived for {}: Qty {} and Price {}\n".format(x['Name'], x['Stock'], x['Price'])
-    #     for x in oldstocks:
-    #         if not any(d['Vehicle'] == x['Vehicle'] for d in stocks):
-    #             soldout_change = soldout_change + "📢 This item has sold out! {}\n".format(x['Name'])
-    #     print("Comparing Done")
-    #     try:
-    #         not_same = newstock_change + stock_change + price_change + all_change + soldout_change
-    #         await shipment_channel.send(not_same)
-    #     except:
-    #         pass
-    #     await self.database.guild(guild_id).OldStocks.set(sorted_stocks)
-    #     print("Done")
-
-    # @check_stock.before_loop
-    # async def before_check_stock(self):
-    #     print('waiting...')
-    #     await self.bot.wait_until_ready()
