@@ -40,6 +40,7 @@ class Order(Database):
             if ordering_channel is None:
                 guild = ctx.guild
                 overwrites = {
+                    author: discord.PermissionOverwrite(read_messages=True),
                     guild.me: discord.PermissionOverwrite(read_messages=True),
                     guild.default_role: discord.PermissionOverwrite(read_messages=False)
                 }
