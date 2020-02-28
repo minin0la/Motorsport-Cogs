@@ -42,7 +42,6 @@ class MOTORSPORT_PARTNERSHIP(commands.Cog):
                 0xFF0000), description="Dear {},\n\nDue to your position at your place of employment, we are pleased to inform you that you are now a Motorsport Partner™️. View our <#345600420883988481> channel for more details, take note that you are now entitled to VIP discounts!\nHave a fantastic day & enjoy your new perks!".format(author.display_name))
             embed.set_thumbnail(
                 url="https://i.imgur.com/maeMy11.png")
-            # await self.database.member(user).VIP_Status.set(True)
             try:
                 await author.send(embed=embed)
             except discord.errors.Forbidden:

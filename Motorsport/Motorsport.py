@@ -39,6 +39,8 @@ class Motorsport(Order, Database, commands.Cog):
 
     #Updating Vehcile Database
     @commands.command(pass_context=True)
+    @commands.has_any_role("Administrator")
+    @commands.guild_only()
     async def updatevehicle(self, ctx):
         start_time = time.time()
         await ctx.send("Please wait...")
@@ -50,6 +52,7 @@ class Motorsport(Order, Database, commands.Cog):
         await ctx.send("Done\n--- Took %s seconds ---" % (time.time() - start_time))
 
     @commands.command(pass_context=True)
+    @commands.guild_only()
     async def order(self, ctx):
         author = ctx.author
         guild = ctx.guild
@@ -180,6 +183,7 @@ class Motorsport(Order, Database, commands.Cog):
         
     #----------------------Membership----------------------
     @commands.group(pass_context=True, invoke_without_command=True)
+    @commands.guild_only()
     async def membership(self, ctx, option=None):
         """Used to manage membership
         """
@@ -451,6 +455,7 @@ class Motorsport(Order, Database, commands.Cog):
         await ctx.send("Cleared All")
 
     @commands.group(pass_context=True)
+    @commands.guild_only()
     @commands.has_any_role("Administrator")
     async def membershipset(self, ctx):
         """Set user's data
