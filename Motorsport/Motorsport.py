@@ -94,14 +94,14 @@ class Motorsport(Order, Database, commands.Cog):
             embed.set_thumbnail(url=price['Brand Image'])
             embed.add_field(name="Brand", value=price['Brand'], inline=True)
             if ctx.channel.id == 343448488715223040:
-                embed.add_field(name="Price", value="$ {:,.2f}".format(price['Price']['Normal']), inline=True)
+                embed.add_field(name="Price", value="$ {}".format(price['Price']['Normal']), inline=True)
             elif ctx.channel.id == 345788278131261442:
-                embed.add_field(name="VIP Price", value="$ {:,.2f}".format(price['Price']['VIP']), inline=True)
+                embed.add_field(name="VIP Price", value="$ {}".format(price['Price']['VIP']), inline=True)
             elif ctx.channel.category_id == 360808237802455041:
-                embed.add_field(name="Price", value="$ {:,.2f}".format(price['Price']['Normal']), inline=True)
-                embed.add_field(name="VIP Price", value="$ {:,.2f}".format(price['Price']['VIP']), inline=True)
+                embed.add_field(name="Price", value="$ {}".format(price['Price']['Normal']), inline=True)
+                embed.add_field(name="VIP Price", value="$ {}".format(price['Price']['VIP']), inline=True)
             if price['Stock'] is not None:
-                embed.add_field(name="Stock ({} Qty)".format(price['Stock']), value="$ {:,.2f}".format(price['Price']['Stock_Price']), inline=True)
+                embed.add_field(name="Stock ({} Qty)".format(price['Stock']), value="$ {}".format(price['Price']['Stock_Price']), inline=True)
             
             embed.add_field(name="Storage (Trunk)", value=price['Storage']['Trunk'], inline=True)
             embed.set_footer(text="Press ➡️ to see vehicle info")

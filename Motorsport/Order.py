@@ -134,9 +134,9 @@ class Order(Database):
             embed.set_thumbnail(url=selected_veh['Brand Image'])
             embed.add_field(name="Brand", value=selected_veh['Brand'], inline=True)
             if VIP is True:
-                embed.add_field(name="Price", value="$ {:,.2f}".format(selected_veh['Price']['VIP']), inline=True)
+                embed.add_field(name="Price", value="$ {}".format(selected_veh['Price']['VIP']), inline=True)
             else:
-                embed.add_field(name="Price", value="$ {:,.2f}".format(selected_veh['Price']['Normal']), inline=True)
+                embed.add_field(name="Price", value="$ {}".format(selected_veh['Price']['Normal']), inline=True)
             embed.add_field(name="Vehicle Name", value=selected_veh['Name'], inline=False)
             
             qembed.set_author(name="Is this correct? (Yes/No)", icon_url="https://media.discordapp.net/attachments/341936003029794826/342238781874896897/DuluxeMotorsportLogo2.png")
@@ -163,7 +163,7 @@ class Order(Database):
                     price = selected_veh['Price']['VIP']
                 else:
                     price = selected_veh['Price']['Normal']
-                embed2.add_field(name="Price", value="$ {:,.2f}".format(price), inline=True)
+                embed2.add_field(name="Price", value="$ {}".format(price), inline=True)
                 embed2.add_field(name="Preferred to be contacted by", value=contact_method, inline=True)
                 embed2.add_field(name="Phone Number", value=contact_number, inline=True)
                 embed2.add_field(name="Discord", value=author.mention, inline=True)
