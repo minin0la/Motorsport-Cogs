@@ -158,7 +158,7 @@ class Motorsport(Order, Database, commands.Cog):
             message = ""
             for y in stocks:
                 if y['Type'] == x and y['Stock'] is not None:
-                    message = message + "{} ({} Qty): ${:,d}\n".format(y['Name'], y['Stock'], y['Price']['Stock_Price'])
+                    message = message + "{} ({} Qty): $ {:,}\n".format(y['Name'], y['Stock'], y['Price']['Stock_Price'])
             message = utils.chat_formatting.pagify(message, delims='\n', page_length=1000)
             try:
                 for num, value in enumerate(message, 1):
