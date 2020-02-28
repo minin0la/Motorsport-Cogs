@@ -60,8 +60,8 @@ class Motorsport(Order, Database, commands.Cog):
             await self.membershipdb.member(author).Name.set(name)
             await self.membershipdb.member(author).MemberID.set(author.id)
             await self.membershipdb.member(author).Joined_Date.set(date)
-            shopper_role = ctx.guild.get_role(482965019189968927)
-            await author.add_roles(shopper_role)
+            customer_role = ctx.guild.get_role(343722834016862211)
+            await author.add_roles(customer_role)
             image = await Membership.create_card(self, ctx, author, name, date)
             embed = discord.Embed(
                 title="Motorsport Management",
@@ -252,8 +252,8 @@ class Motorsport(Order, Database, commands.Cog):
             await self.membershipdb.member(author).Name.set(name)
             await self.membershipdb.member(author).MemberID.set(author.id)
             await self.membershipdb.member(author).Joined_Date.set(date)
-            shopper_role = ctx.guild.get_role(482965019189968927)
-            await author.add_roles(shopper_role)
+            customer_role = ctx.guild.get_role(343722834016862211)
+            await author.add_roles(customer_role)
             image = await Membership.create_card(self, ctx, author, name, date)
             embed = discord.Embed(
                 title="Motorsport Management",
