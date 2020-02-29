@@ -24,7 +24,6 @@ from PIL import ImageDraw
 
 from .Order import Order
 from .Database import Database
-from .Membership import Membership
 
 class Motorsport(Order, Database, commands.Cog):
     """Motorsport Database System"""
@@ -107,6 +106,7 @@ class Motorsport(Order, Database, commands.Cog):
                 embed.add_field(name="Stock ({} Qty)".format(price['Stock']), value="$ {:,}".format(price['Price']['Stock_Price']), inline=True)
             
             embed.add_field(name="Storage (Trunk)", value=price['Storage']['Trunk'], inline=True)
+            embed.add_field(name="Enterable Trunk", value="No" if price['enterable_trunk'] == 'FALSE' else "Yes", inline=True)
             embed.set_footer(text="Press ➡️ to see vehicle info")
             embed2 = discord.Embed(colour=discord.Colour(0x984c87))
             if price['Speed']['Laptime']['Overall'] is not None:
@@ -120,6 +120,7 @@ class Motorsport(Order, Database, commands.Cog):
             embed2.set_thumbnail(url='https://i.imgur.com/xJyIgAQ.png')    
             embed2.add_field(name="Storage (Trunk)", value=price['Storage']['Trunk'], inline=True)
             embed2.add_field(name="Storage (Glovebox)", value=price['Storage']['Glovebox'], inline=True)
+            embed2.add_field(name="Enterable Trunk", value="No" if price['enterable_trunk'] == 'FALSE' else "Yes", inline=True)
             embed2.add_field(name="Drive", value=price['Drive'], inline=True)
             embed2.add_field(name="Capacity", value=price['Capacity'], inline=False)
             embed2.set_footer(text="Press ➡️ to see vehicle price")
@@ -175,7 +176,7 @@ class Motorsport(Order, Database, commands.Cog):
         await utils.menus.menu(ctx, pages, CONTROLS, timeout=60.0)
         themessage = await ctx.channel.history(after=msg.created_at, limit=1).flatten()
         try:
-            await themessage[0].delete()
+            await themessage[0].edit(content="Done checking stock\n!allstock to check again.", embed=None)
         except:
             pass
         await msg.delete()
@@ -189,6 +190,11 @@ class Motorsport(Order, Database, commands.Cog):
         """
         if ctx.invoked_subcommand is None:
             if option is not None:
+                try:
+                    int(option)
+                except ValueError:
+                    await ctx.send_help('membership')
+                    return
                 if "Bot-Developer" in [x.name for x in ctx.author.roles]:
                     cmd = self.bot.get_command(f"membership info")
                     await ctx.invoke(cmd, user_id=option)
@@ -201,16 +207,16 @@ class Motorsport(Order, Database, commands.Cog):
     async def info(self, ctx, user_id=None):
         """Check membership Info
         """
-        if user_id is not None:
-            if "Bot-Developer" in [x.name for x in ctx.author.roles]:
-                try:
-                    author = await ctx.guild.fetch_member(int(user_id))
-                except ValueError:
-                    ctx.invoked_subcommand = user_id
-            else:
-                author = ctx.author
-        else:
-            author = ctx.author
+        if user_id is None:
+            user_id = ctx.author.id
+        if "Bot-Developer" not in [x.name for x in ctx.author.roles]:
+            user_id = ctx.author.id
+        try:
+            int(user_id)
+        except ValueError:
+            await ctx.send_help('membership')
+            return  
+        author = await ctx.guild.fetch_member(int(user_id))
         membershipinfo = await self.membershipdb.member(author).get_raw()
         if membershipinfo["Name"] != "":
             value = 0

@@ -61,6 +61,7 @@ class Database:
         glovebox = wks.get_col(11, include_tailing_empty=False)
         trunk = wks.get_col(12, include_tailing_empty=False)
         for_sale = wks.get_col(14, include_tailing_empty=False)
+        enterable_trunk = wks.get_col(17, include_tailing_empty=False)
         veh_price = []
 
         for i in range(1, len(list(vehicle_name))):
@@ -98,7 +99,8 @@ class Database:
                     "Brand Image": brand_image[i],
                     "Performance Image": performance_image[i],
                     "Stock": None,
-                    "For_Sale": for_sale[i]
+                    "For_Sale": for_sale[i],
+                    "enterable_trunk": enterable_trunk[i]
                 }
             )
         return veh_price
