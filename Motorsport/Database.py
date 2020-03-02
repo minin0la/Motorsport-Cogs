@@ -122,6 +122,7 @@ class Database:
             data = response.json()
             data = data['dealerships']
         except:
+            print("Getting New Token")
             url = "https://api.eclipse-rp.net/auth/login"
             with open('/root/data.txt') as thefile:
                 data = thefile.read()
@@ -261,10 +262,10 @@ class Database:
                         if x['Stock'] is None and y['Stock'] is not None:
                             soldout_change = soldout_change + "📢 This item has sold out! {}\n".format(x['Name'])
                         elif x['Stock'] is not None and y['Stock'] is None:
-                            newstock_change = newstock_change + "🚛 New stock arrived for {}: Qty {} and Price {} {}\n".format(x['Name'], x['Stock'], x['Price']['Normal'], "✅" if x['Price']['Normal'] == x['Price']['Stock_Price'] else "❌")
+                            newstock_change = newstock_change + "🚛 New stock arrived for {}: Qty {} and Price {} {}\n".format(x['Name'], x['Stock'], x['Price']['Stock_Price'], "✅" if x['Price']['Normal'] == x['Price']['Stock_Price'] else "❌")
                         elif x['Stock'] is not None and y['Stock'] is not None:        
                             if x['Price']['Stock_Price'] != y['Price']['Stock_Price']:
-                                price_change = price_change + "💵 New change to {}: Price {} > {} {}\n".format(x['Name'], y['Price'], x['Price']['Normal'], "✅" if x['Price']['Normal'] == x['Price']['Stock_Price'] else "❌")
+                                price_change = price_change + "💵 New change to {}: Price {} > {} {}\n".format(x['Name'], y['Price']['Stock_Price'], x['Price']['Stock_Price'], "✅" if x['Price']['Normal'] == x['Price']['Stock_Price'] else "❌")
                             if x['Stock']!= y['Stock']:
                                 stock_change = stock_change + "⚖️ New change to {}: Qty {} > {}\n".format(x['Name'], y['Stock'], x['Stock'])
             not_same = newstock_change + stock_change + price_change + all_change + soldout_change
