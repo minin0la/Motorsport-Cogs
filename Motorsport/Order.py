@@ -41,9 +41,9 @@ class Order(Database):
             guild.default_role: discord.PermissionOverwrite(read_messages=False)
         }
         ordering_channel = await guild.create_text_channel('Ordering-{}'.format(random.randint(1,9999)),overwrites=overwrites)
+        customer_name = ""
+        finished_order = False
         while True:
-            customer_name = ""
-            finished_order = False
             order_channel = ctx.bot.get_channel(341936700366258177)
             if any(r.name == 'VIP' for r in author.roles):
                 info_embed = await ordering_channel.send("""Hi {}, Welcome to Premium Deluxe Motorsport **VIP** Ordering System""".format(author.mention))
