@@ -57,7 +57,7 @@ class Order(Database):
             question_embed = await ordering_channel.send(embed=qembed)
             msg = await self.wait_for_answer(ctx, ordering_channel)
             if msg is None:
-                return
+                break
             customer_name = msg.content
             await msg.delete()
 
@@ -71,7 +71,7 @@ class Order(Database):
             await question_embed.edit(embed=qembed)
             msg = await self.wait_for_answer(ctx, ordering_channel)
             if msg is None:
-                return
+                break
             contact_number = msg.content
             await msg.delete()
 
@@ -83,7 +83,7 @@ class Order(Database):
             await question_embed.edit(embed=qembed)
             msg = await self.wait_for_answer(ctx, ordering_channel)
             if msg is None:
-                return
+                break
             contact_method = msg.content
             await msg.delete()
             
@@ -95,7 +95,7 @@ class Order(Database):
             await question_embed.edit(embed=qembed)
             msg = await self.wait_for_answer(ctx, ordering_channel)
             if msg is None:
-                return
+                break
             customer_remarks = msg.content
             await msg.delete()
 
@@ -110,7 +110,7 @@ class Order(Database):
                 msg = await self.wait_for_answer(ctx, ordering_channel)
                 if msg is None:
                     await asyncio.sleep(10.0)
-                    return
+                    break
                 selected_veh, embed = await self.get_vehicle(ctx, car_name=msg.content)
                 if selected_veh is None:
                     await msg.delete()
@@ -139,7 +139,7 @@ class Order(Database):
             await question_embed.edit(embed=qembed)
             msg = await self.wait_for_answer(ctx, ordering_channel)
             if msg is None:
-                return
+                break
             answer = msg.content
             await msg.delete()
 
