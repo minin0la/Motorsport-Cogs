@@ -109,7 +109,6 @@ class Order(Database):
             while selected_veh is None:    
                 msg = await self.wait_for_answer(ctx, ordering_channel)
                 if msg is None:
-                    await asyncio.sleep(10.0)
                     break
                 selected_veh, embed = await self.get_vehicle(ctx, car_name=msg.content)
                 if selected_veh is None:
