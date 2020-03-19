@@ -56,8 +56,9 @@ class Motorsport(Order, Database, commands.Cog):
         author = ctx.author
         guild = ctx.guild
         date = str(datetime.datetime.now().strftime("%d/%m/%y"))
-        name, ordering_channel, finished_order = await super().order(ctx, car_name=None, ordering_channel=None)
+        name, ordering_channel, finished_order = await super().order(ctx, car_name=None)
         if finished_order is False:
+            await ordering_channel.delete()
             return
         membershipinfo = await self.membershipdb.member(author).get_raw()
         if membershipinfo["Name"] == "" and finished_order is True:

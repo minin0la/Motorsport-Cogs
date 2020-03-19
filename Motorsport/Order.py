@@ -32,21 +32,19 @@ class Order(Database):
                 break                
         return msg
 
-    async def order(self, ctx, car_name, ordering_channel):
+    async def order(self, ctx, car_name):
+        guild = ctx.guild
+        author = ctx.author
+        overwrites = {
+            author: discord.PermissionOverwrite(read_messages=True),
+            guild.me: discord.PermissionOverwrite(read_messages=True),
+            guild.default_role: discord.PermissionOverwrite(read_messages=False)
+        }
+        ordering_channel = await guild.create_text_channel('Ordering-{}'.format(random.randint(1,9999)),overwrites=overwrites)
         while True:
             customer_name = ""
             finished_order = False
-            guild = ctx.guild
-            author = ctx.author
             order_channel = ctx.bot.get_channel(341936700366258177)
-            if ordering_channel is None:
-                guild = ctx.guild
-                overwrites = {
-                    author: discord.PermissionOverwrite(read_messages=True),
-                    guild.me: discord.PermissionOverwrite(read_messages=True),
-                    guild.default_role: discord.PermissionOverwrite(read_messages=False)
-                }
-                ordering_channel = await guild.create_text_channel('Ordering-{}'.format(random.randint(1,9999)),overwrites=overwrites)
             if any(r.name == 'VIP' for r in author.roles):
                 info_embed = await ordering_channel.send("""Hi {}, Welcome to Premium Deluxe Motorsport **VIP** Ordering System""".format(author.mention))
                 VIP = True
@@ -59,7 +57,6 @@ class Order(Database):
             question_embed = await ordering_channel.send(embed=qembed)
             msg = await self.wait_for_answer(ctx, ordering_channel)
             if msg is None:
-                await ordering_channel.delete()
                 return
             customer_name = msg.content
             await msg.delete()
@@ -74,7 +71,6 @@ class Order(Database):
             await question_embed.edit(embed=qembed)
             msg = await self.wait_for_answer(ctx, ordering_channel)
             if msg is None:
-                await ordering_channel.delete()
                 return
             contact_number = msg.content
             await msg.delete()
@@ -87,7 +83,6 @@ class Order(Database):
             await question_embed.edit(embed=qembed)
             msg = await self.wait_for_answer(ctx, ordering_channel)
             if msg is None:
-                await ordering_channel.delete()
                 return
             contact_method = msg.content
             await msg.delete()
@@ -100,7 +95,6 @@ class Order(Database):
             await question_embed.edit(embed=qembed)
             msg = await self.wait_for_answer(ctx, ordering_channel)
             if msg is None:
-                await ordering_channel.delete()
                 return
             customer_remarks = msg.content
             await msg.delete()
@@ -116,7 +110,6 @@ class Order(Database):
                 msg = await self.wait_for_answer(ctx, ordering_channel)
                 if msg is None:
                     await asyncio.sleep(10.0)
-                    await ordering_channel.delete()
                     return
                 selected_veh, embed = await self.get_vehicle(ctx, car_name=msg.content)
                 if selected_veh is None:
@@ -146,7 +139,6 @@ class Order(Database):
             await question_embed.edit(embed=qembed)
             msg = await self.wait_for_answer(ctx, ordering_channel)
             if msg is None:
-                await ordering_channel.delete()
                 return
             answer = msg.content
             await msg.delete()
