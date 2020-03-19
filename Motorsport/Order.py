@@ -35,7 +35,6 @@ class Order(Database):
     async def order(self, ctx, car_name, ordering_channel):
         while True:
             customer_name = ""
-            ordering_channel = ""
             finished_order = False
             guild = ctx.guild
             author = ctx.author
