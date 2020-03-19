@@ -57,6 +57,7 @@ class Motorsport(Order, Database, commands.Cog):
         guild = ctx.guild
         date = str(datetime.datetime.now().strftime("%d/%m/%y"))
         name, ordering_channel, finished_order = await super().order(ctx, car_name=None)
+        print(name, ordering_channel, finished_order)
         if finished_order is False:
             await ordering_channel.delete()
             return
