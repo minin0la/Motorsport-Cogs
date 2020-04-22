@@ -51,6 +51,38 @@ class Motorsport(Order, Database, commands.Cog):
         await ctx.send("Done\n--- Took %s seconds ---" % (time.time() - start_time))
 
     @commands.command(pass_context=True)
+    @commands.has_any_role("Administrator")
+    @commands.guild_only()
+    async def checkprice(self, ctx):
+
+        veh_price = await super().vehicle_price()
+        stocks = await super().vehicle_stock()
+        speed = await super().vehicle_speed()
+        veh_price = await self.combinedata(veh_price, stocks, speed)
+        await self.comparingstocks(veh_price)
+
+        category = [a['Type'] for a in veh_price]
+        category = list(dict.fromkeys(category))
+        detected = False
+        for z in category:
+            message = "```fix\n{}```\n>>> ".format(z)
+            counting = 0
+            for x in veh_price:
+                if x['Price']['Stock'] != ['Price']['Normal'] and x['Type'] == z:
+                    message = message + "**{}** has the wrong price set (${:,}).\nCorrect Price:```{}```".format(x['Name'], x['Price'], y['Price'].replace(',','').replace('$','').replace(' ',''))
+                    detected = True
+                    if counting < 10:
+                        counting = counting + 1
+                    else:
+                        await ctx.send(message)
+                        message = '>>> '
+                        counting = 0
+            if counting > 0:
+                await ctx.send(message)
+        if detected is False:
+            await ctx.send("If you see nothing. That's mean the price is right :D")
+
+    @commands.command(pass_context=True)
     @commands.guild_only()
     async def order(self, ctx):
         author = ctx.author
