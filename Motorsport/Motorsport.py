@@ -55,7 +55,7 @@ class Motorsport(Order, Database, commands.Cog):
     @commands.guild_only()
     async def checkprice(self, ctx):
         
-        await ctx.send("Updating Vehcile Database")
+        await ctx.send("Updating Vehicle Database")
         veh_price = await super().vehicle_price()
         stocks = await super().vehicle_stock()
         speed = await super().vehicle_speed()
@@ -70,7 +70,7 @@ class Motorsport(Order, Database, commands.Cog):
             message = "```fix\n{}```\n>>> ".format(z)
             counting = 0
             for x in veh_price:
-                if x['Price']['Stock_Price'] != ['Price']['Normal'] and x['Type'] == z and x['Price']['Stock_Price'] is not None:
+                if x['Price']['Stock_Price'] != x['Price']['Normal'] and x['Type'] == z and x['Price']['Stock_Price'] is not None:
                     message = message + "**{}** has the wrong price set (${:,}).\nCorrect Price:```{}```".format(x['Name'], x['Price'], y['Price'].replace(',','').replace('$','').replace(' ',''))
                     detected = True
                     if counting < 10:
