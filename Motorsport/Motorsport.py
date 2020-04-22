@@ -71,7 +71,7 @@ class Motorsport(Order, Database, commands.Cog):
             counting = 0
             for x in veh_price:
                 if x['Price']['Stock_Price'] != x['Price']['Normal'] and x['Type'] == z and x['Price']['Stock_Price'] is not None:
-                    message = message + "**{}** has the wrong price set (${:,}).\nCorrect Price:```{}```".format(x['Name'], x['Price'], y['Price'].replace(',','').replace('$','').replace(' ',''))
+                    message = message + "**{}** has the wrong price set (${:,}).\nCorrect Price:```{}```".format(x['Name'], x['Price']['Stock_Price'], x['Price']['Normal'])
                     detected = True
                     if counting < 10:
                         counting = counting + 1
