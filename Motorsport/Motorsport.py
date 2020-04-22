@@ -54,13 +54,15 @@ class Motorsport(Order, Database, commands.Cog):
     @commands.has_any_role("Administrator")
     @commands.guild_only()
     async def checkprice(self, ctx):
-
+        
+        await ctx.send("Updating Vehcile Database")
         veh_price = await super().vehicle_price()
         stocks = await super().vehicle_stock()
         speed = await super().vehicle_speed()
         veh_price = await self.combinedata(veh_price, stocks, speed)
         await self.comparingstocks(veh_price)
 
+        await ctx.send("Comparing Prices")
         category = [a['Type'] for a in veh_price]
         category = list(dict.fromkeys(category))
         detected = False
@@ -68,7 +70,7 @@ class Motorsport(Order, Database, commands.Cog):
             message = "```fix\n{}```\n>>> ".format(z)
             counting = 0
             for x in veh_price:
-                if x['Price']['Stock'] != ['Price']['Normal'] and x['Type'] == z:
+                if x['Price']['Stock_Price'] != ['Price']['Normal'] and x['Type'] == z:
                     message = message + "**{}** has the wrong price set (${:,}).\nCorrect Price:```{}```".format(x['Name'], x['Price'], y['Price'].replace(',','').replace('$','').replace(' ',''))
                     detected = True
                     if counting < 10:
